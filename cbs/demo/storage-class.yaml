@@ -1,0 +1,19 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: jdcsp-cbs-sc
+provisioner: jdcsp-block.csi.jdcloud.com
+parameters:
+  media: hdd
+  csi.storage.k8s.io/fstype: xfs
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+---
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: jdcsp-cbs-snapshot-sc
+driver: jdcsp-block.csi.jdcloud.com
+deletionPolicy: Delete
+parameters:

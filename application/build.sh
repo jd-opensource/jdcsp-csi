@@ -1,0 +1,1 @@
+docker build -t harbor.jdts.com/centos/jdcsp-csi-demo-app:v1.0 ./

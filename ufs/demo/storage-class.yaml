@@ -1,0 +1,8 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: jdcsp-ufs-sc
+provisioner: jdcsp-file.csi.jdcloud.com
+reclaimPolicy: Delete
+allowVolumeExpansion: true

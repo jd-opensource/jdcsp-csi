@@ -1,0 +1,98 @@
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: jdcsp-file-csi-node
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: jdcsp-file-csi-node
+  template:
+    metadata:
+      labels:
+        app: jdcsp-file-csi-node
+    spec:
+      serviceAccount: jdcsp-csi-sa
+      containers:
+        - name: ufs-driver-registrar
+          image: harbor.jdts.com/k8s-csi/csi-node-driver-registrar:v2.7.0
+          imagePullPolicy: Always
+          args:
+            - "--v=5"
+            - "--csi-address=/var/lib/kubelet/csi-plugins/jdcsp-file.csi.jdcloud.com/csi.sock"
+            - "--kubelet-registration-path=/var/lib/kubelet/csi-plugins/jdcsp-file.csi.jdcloud.com/csi.sock"
+          volumeMounts:
+            - name: kubelet-dir
+              mountPath: /var/lib/kubelet
+            - name: registration-dir
+              mountPath: /registration
+        - name: csi-plugin
+          securityContext:
+            privileged: true
+            capabilities:
+              add: [ "SYS_ADMIN" ]
+            allowPrivilegeEscalation: true
+          image: harbor.jdts.com/k8s-csi/csi-plugin:amd64-v1.0-8f8d2a2
+          imagePullPolicy: "Always"
+          args:
+            - "--mode=node"
+            - "--endpoint=$(CSI_ENDPOINT)"
+            - "--nodeid=$(KUBE_NODE_NAME)"
+            - "--driver=jdcsp-file"
+            - "--jdcloud-csi-debug-log"
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: CSI_ENDPOINT
+              value: unix://var/lib/kubelet/csi-plugins/jdcsp-file.csi.jdcloud.com/csi.sock
+            - name: SERVER_ADDR
+              value: "http://JDCSP_MANAGEMENT_SERVER_ADDR" # Replace with JD-CSP Management Server
+            - name: USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: jdcsp-csi-secrets
+                  key: USER_NAME
+            - name: USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jdcsp-csi-secrets
+                  key: USER_PASSWORD
+          volumeMounts:
+            - name: kubelet-dir
+              mountPath: /var/lib/kubelet/
+              mountPropagation: "Bidirectional"
+            - name: log-dir
+              mountPath: /var/log/
+            - name: container-dir
+              mountPath: /var/lib/container
+              mountPropagation: "Bidirectional"
+            - name: ufs-agent-dir
+              mountPath: /host/export/jcloud-ufs/sock/
+      volumes:
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: DirectoryOrCreate
+        - name: container-dir
+          hostPath:
+            path: /var/lib/container
+            type: DirectoryOrCreate
+        - name: kubelet-dir
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+        - name: log-dir
+          hostPath:
+            path: /var/log/
+        - name: ufs-agent-dir
+          hostPath:
+            path: /export/jcloud-ufs/sock/
+            type: DirectoryOrCreate
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 10%
+    type: RollingUpdate

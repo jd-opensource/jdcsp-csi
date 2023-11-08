@@ -1,0 +1,7 @@
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: jdcsp-file.csi.jdcloud.com
+spec:
+  attachRequired: false
+  podInfoOnMount: true

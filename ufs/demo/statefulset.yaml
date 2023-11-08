@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ufs-file-sts
+spec:
+  selector:
+    matchLabels:
+      app: ufs-file-sts
+  serviceName: ufs-file-svc
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ufs-file-sts
+    spec:
+      containers:
+        - name: ufs-file-sts
+          image: harbor.jdts.com/k8s-csi/centos-test:v1
+          volumeMounts:
+            - name: pvc
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: pvc
+      spec:
+        accessModes: [ "ReadWriteMany" ]
+        storageClassName: jdcsp-ufs-sc
+        resources:
+          requests:
+            storage: 100Gi

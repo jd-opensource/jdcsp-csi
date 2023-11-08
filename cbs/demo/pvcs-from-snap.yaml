@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cbs-pvc-3
+spec:
+  dataSource:
+    name: cbs-snapshot-1
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Block
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: jdcsp-cbs-sc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cbs-pvc-4
+spec:
+  dataSource:
+    name: cbs-snapshot-2
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: jdcsp-cbs-sc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cbs-pvc-5
+spec:
+  dataSource:
+    name: cbs-snapshot-1
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Block
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: jdcsp-cbs-sc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cbs-pvc-6
+spec:
+  dataSource:
+    name: cbs-snapshot-2
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: jdcsp-cbs-sc

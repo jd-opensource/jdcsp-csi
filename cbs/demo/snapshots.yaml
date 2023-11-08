@@ -1,0 +1,18 @@
+---
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: cbs-snapshot-1
+spec:
+  volumeSnapshotClassName: jdcsp-cbs-snapshot-sc
+  source:
+    persistentVolumeClaimName: cbs-pvc-1
+---
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: cbs-snapshot-2
+spec:
+  volumeSnapshotClassName: jdcsp-cbs-snapshot-sc
+  source:
+    persistentVolumeClaimName: cbs-pvc-2

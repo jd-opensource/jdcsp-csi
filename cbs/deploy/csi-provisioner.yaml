@@ -1,0 +1,161 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: jdcsp-block-csi-provisioner
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: jdcsp-block-csi-provisioner
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: jdcsp-block-csi-provisioner
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+                  - key: node-role.kubernetes.io/master
+                    operator: Exists
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - jdcsp-block-csi-provisioner
+                topologyKey: kubernetes.io/hostname
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+          key: node-role.kubernetes.io/master
+      serviceAccount: jdcsp-csi-sa
+      containers:
+        - name: external-cbs-provisioner
+          image: harbor.jdts.com/k8s-csi/csi-provisioner:v3.5.0
+          args:
+            - "--csi-address=$(ADDRESS)"
+            - "--feature-gates=Topology=False"
+            - "--volume-name-prefix=cbs"
+            - "--strict-topology=true"
+            - "--timeout=150s"
+            - "--leader-election=true"
+            - "--extra-create-metadata=true"
+            - "--retry-interval-start=500ms"
+            - "--default-fstype=ext4"
+            - "--v=5"
+          env:
+            - name: ADDRESS
+              value: /var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com/csi.sock
+          imagePullPolicy: "Always"
+          volumeMounts:
+            - name: provisioner-dir
+              mountPath: /var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com
+        - name: external-cbs-attacher
+          image: harbor.jdts.com/k8s-csi/csi-attacher:v4.2.0
+          args:
+            - "--v=5"
+            - "--csi-address=$(ADDRESS)"
+            - "--leader-election=true"
+          env:
+            - name: ADDRESS
+              value: /var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com/csi.sock
+          imagePullPolicy: "Always"
+          volumeMounts:
+            - name: provisioner-dir
+              mountPath: /var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com
+        - name: external-cbs-resizer
+          image: harbor.jdts.com/k8s-csi/csi-resizer:v1.7.0
+          args:
+            - "--v=5"
+            - "--csi-address=$(ADDRESS)"
+            - "--leader-election"
+          env:
+            - name: ADDRESS
+              value: /var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com/csi.sock
+          volumeMounts:
+            - name: provisioner-dir
+              mountPath: /var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com
+        - name: external-cbs-snapshotter
+          image: harbor.jdts.com/k8s-csi/csi-snapshotter:v6.2.1
+          args:
+            - "--v=5"
+            - "--csi-address=$(ADDRESS)"
+            - "--leader-election"
+            - "--extra-create-metadata=true"
+          env:
+            - name: ADDRESS
+              value: /var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com/csi.sock
+          volumeMounts:
+            - name: provisioner-dir
+              mountPath: /var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com
+        - name: external-snapshot-controller
+          image: harbor.jdts.com/k8s-csi/snapshot-controller:v6.2.1
+          args:
+            - "--v=5"
+            - "--leader-election=true"
+        - name: csi-provisioner
+          securityContext:
+            privileged: true
+            capabilities:
+              add: [ "SYS_ADMIN" ]
+            allowPrivilegeEscalation: true
+          image: harbor.jdts.com/k8s-csi/csi-plugin:amd64-v1.0-8f8d2a2
+          imagePullPolicy: "Always"
+          args:
+            - "--mode=controller"
+            - "--endpoint=$(CSI_ENDPOINT)"
+            - "--nodeid=$(KUBE_NODE_NAME)"
+            - "--driver=jdcsp-block"
+            - "--jdcloud-csi-debug-log"
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: CSI_ENDPOINT
+              value: unix://var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com/csi.sock
+            - name: SERVER_ADDR
+              value: "http://JDCSP_MANAGEMENT_SERVER_ADDR" # Replace with JD-CSP Management Server
+            - name: USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: jdcsp-csi-secrets
+                  key: USER_NAME
+            - name: USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jdcsp-csi-secrets
+                  key: USER_PASSWORD
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1024Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: host-dev
+              mountPath: /dev
+              mountPropagation: "HostToContainer"
+            - name: host-log
+              mountPath: /var/log/
+            - name: provisioner-dir
+              mountPath: /var/lib/kubelet/csi-provisioner/jdcsp-block.csi.jdcloud.com
+      volumes:
+        - name: provisioner-dir
+          emptyDir: { }
+        - name: host-log
+          hostPath:
+            path: /var/log/
+        - name: host-dev
+          hostPath:
+            path: /dev

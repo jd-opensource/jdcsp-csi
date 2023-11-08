@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cbs-snap-demo-app
+spec:
+  selector:
+    matchLabels:
+      name: cbs-snap-demo-app
+  template:
+    metadata:
+      labels:
+        name: cbs-snap-demo-app
+    spec:
+      containers:
+        - name: demo
+          image: harbor.jdts.com/centos/jdcsp-csi-demo-app:v1.0
+          volumeDevices:
+            - name: volume-3
+              devicePath: /block2
+            - name: volume-5
+              devicePath: /block3
+          volumeMounts:
+            - name: volume-4
+              mountPath: /data2
+            - name: volume-6
+              mountPath: /data3
+      volumes:
+        - name: volume-3
+          persistentVolumeClaim:
+            claimName: cbs-pvc-3
+            readOnly: false
+        - name: volume-4
+          persistentVolumeClaim:
+            claimName: cbs-pvc-4
+            readOnly: false
+        - name: volume-5
+          persistentVolumeClaim:
+            claimName: cbs-pvc-5
+            readOnly: false
+        - name: volume-6
+          persistentVolumeClaim:
+            claimName: cbs-pvc-6
+            readOnly: false

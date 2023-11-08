@@ -1,0 +1,32 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cbs-demo-app
+spec:
+  selector:
+    matchLabels:
+      name: cbs-demo-app
+  template:
+    metadata:
+      labels:
+        name: cbs-demo-app
+    spec:
+      containers:
+        - name: demo
+          image: harbor.jdts.com/centos/jdcsp-csi-demo-app:v1.0
+          volumeDevices:
+            - name: volume-1
+              devicePath: /block1
+          volumeMounts:
+            - name: volume-2
+              mountPath: /data1
+      volumes:
+        - name: volume-1
+          persistentVolumeClaim:
+            claimName: cbs-pvc-1
+            readOnly: false
+        - name: volume-2
+          persistentVolumeClaim:
+            claimName: cbs-pvc-2
+            readOnly: false
